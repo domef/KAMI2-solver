@@ -7,4 +7,5 @@ This is a solver for the mobile game KAMI 2.
 The only thing you have to do is to translate a level of the game into a graph and the program will give you the solution.
 
 NEXT UPDATE:
+
 An user-friendly GUI is under development where you can create a level just like in the in-game sandbox instead of creating the graph by hand.
