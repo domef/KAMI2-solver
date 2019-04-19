@@ -68,6 +68,9 @@ class MainApplication(tk.Frame):
         self.entry.insert(tk.END, 'Insert the number of moves')
         self.entry.pack(fill=tk.X)
 
+        self.text = tk.Text(self.frame, height=18, state=tk.DISABLED)
+        self.text.pack()
+
         self.button = tk.Button(self.frame, text='Calculate solution')
         self.button.pack()
         self.button.bind('<ButtonRelease-1>', on_button_click)
@@ -402,8 +405,12 @@ def solve(graph, step = 1):
                     return
 
                 if len(new_graph) == 1:
+                    app.text.config(state=tk.NORMAL)
+                    app.text.delete(1.0, tk.END)
                     for id, color in moves:
-                        print (str(id) + ": " + color)
+                        app.text.insert(tk.END, str(id) + ": " + color + '\n')
+
+                    app.text.config(state=tk.DISABLED)
                     
                     # print ()
                     # count += 1
@@ -413,7 +420,10 @@ def solve(graph, step = 1):
                 else:
                     moves.pop()
 
-    print('no solution can be found with ' + str(moves_number) + ' moves')
+    app.text.config(state=tk.NORMAL)
+    app.text.delete(1.0, tk.END)
+    app.text.insert(tk.END, 'no solution can be found with ' + str(moves_number) + ' move(s)')
+    app.text.config(state=tk.DISABLED)
 
 if __name__ == "__main__":
     root = tk.Tk()
