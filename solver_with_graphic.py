@@ -7,6 +7,8 @@ import re
 colors = []
 moves_number = 0
 moves = []
+solution_steps = []
+current_step = 0
 found = False
 count = 0
 
@@ -26,6 +28,7 @@ class Node:
         self.id = id
         self.color = color
         self.adjacentNodes = set()
+        self.originalNodes = set()
 
 class MainApplication(tk.Frame):
     def __init__(self, parent):
@@ -48,10 +51,6 @@ class MainApplication(tk.Frame):
         self.frame = tk.Frame(self.parent, bg='black')
         self.frame.grid(row=0, column=1, sticky=tk.N+tk.S+tk.W+tk.E)
 
-        self.label_warning = tk.Label(self.frame, height=3, text='Warning, the level must be a CONNECTED COMPONENT!', bg='white')
-        self.label_warning.pack()
-        self.blinking()
-
         self.selected_color = tk.IntVar()
 
         self.radio_buttons = []
@@ -71,16 +70,21 @@ class MainApplication(tk.Frame):
         self.text = tk.Text(self.frame, height=18, state=tk.DISABLED)
         self.text.pack()
 
-        self.button = tk.Button(self.frame, text='Calculate solution')
-        self.button.pack()
-        self.button.bind('<ButtonRelease-1>', on_button_click)
+        self.previous_button = tk.Button(self.frame, text='Prev', state=tk.DISABLED, command=on_previous_button_click)
+        self.previous_button.pack()
+        # self.previous_button.bind('<ButtonRelease-1>', on_previous_button_click)
 
-    def blinking(self):
-        current_color = self.label_warning.cget('bg')
-        next_color = 'white' if current_color == 'red' else 'red'
-        self.label_warning.config(bg=next_color)
+        self.next_button = tk.Button(self.frame, text='Next', state=tk.DISABLED, command=on_next_button_click)
+        self.next_button.pack()
+        # self.next_button.bind('<ButtonRelease-1>', on_next_button_click)
 
-        self.parent.after(400, self.blinking)
+        self.reset_button = tk.Button(self.frame, text='Reset')
+        self.reset_button.pack()
+        self.reset_button.bind('<ButtonRelease-1>', on_reset_button_click)
+
+        self.solution_button = tk.Button(self.frame, text='Calculate solution')
+        self.solution_button.pack()
+        self.solution_button.bind('<ButtonRelease-1>', on_solution_button_click)
 
 def on_canvas_click(event):
     value = app.selected_color.get()
@@ -91,13 +95,15 @@ def on_canvas_click(event):
 
     print ((event.widget.find_withtag('current')[0] - 1))
 
-def on_button_click(event):
+def on_solution_button_click(event):
     global moves_number
     global moves
     global colors
     global found
+    global solution_steps
 
     moves = []
+    solution_steps = []
     found = False
 
     res, value = get_moves_number()
@@ -135,6 +141,8 @@ def on_button_click(event):
 
     print ('length before: ' + str(len(graph)))
 
+    fix_single_nodes(graph)
+
     unify(graph)
 
     print ('length after: ' + str(len(graph)))
@@ -146,6 +154,63 @@ def on_button_click(event):
         return
 
     solve(graph)
+
+    # app.next_button.config(state=tk.NORMAL)
+    
+def on_reset_button_click(event):    
+    global current_step
+    global solution_steps
+
+    solution_steps = []
+    current_step = 0
+
+    items = app.canvas.find_all()
+
+    for item in items:
+        app.canvas.itemconfigure(item, fill='white')
+
+    app.previous_button.config(state=tk.DISABLED)
+    app.next_button.config(state=tk.DISABLED)
+
+def on_previous_button_click():
+    global current_step
+    global solution_steps
+
+    current_step -= 1
+
+    if current_step == 0:
+        app.previous_button.config(state=tk.DISABLED)
+
+    items = solution_steps[current_step]
+
+    for i in range(0, len(items)):
+        app.canvas.itemconfig(i + 1, fill=solution_steps[current_step][i])
+
+    
+
+    if str(app.next_button['state']) == 'disabled':
+        app.next_button.config(state=tk.NORMAL)
+
+    
+
+def on_next_button_click():
+    global current_step
+    global solution_steps
+
+    current_step += 1
+
+    if current_step == len(solution_steps) - 1:
+        app.next_button.config(state=tk.DISABLED)
+    
+    items = solution_steps[current_step]
+
+    for i in range(0, len(items)):
+        app.canvas.itemconfig(i + 1, fill=solution_steps[current_step][i])
+
+    if str(app.previous_button['state']) == 'disabled':
+        app.previous_button.config(state=tk.NORMAL)
+
+    
 
 def test(event):
 
@@ -170,19 +235,19 @@ def test(event):
 # FIX DOUBLE LINE
 def create_triangles(side_length):
     result = []
-    half_width = int(side_length / 2)
+    half_width = int(side_length // 2)
     # height = int(side_length * math.sqrt(3) / 2)
     height = side_length
     max_width = 15 * side_length
     max_height = 10 * height
 
     for i in range(0, max_height, height):
-        if (i / height) % 2 == 0: # colonna dispari
+        if (i // height) % 2 == 0: # colonna dispari
             for j in range(0, max_width-half_width, half_width):
                 if j % side_length == 0: # destra
-                    triangle = (i-height/2+1, j-half_width+1, i+height/2+1, j+1, i-height/2+1, j+half_width+1)
+                    triangle = (i-height//2+1, j-half_width+1, i+height//2+1, j+1, i-height//2+1, j+half_width+1)
                 else: # sinistra
-                    triangle = (i-height/2+1, j+1, i+height/2+1, j+half_width+1, i+height/2+1, j-half_width+1)
+                    triangle = (i-height//2+1, j+1, i+height//2+1, j+half_width+1, i+height//2+1, j-half_width+1)
                 
                 result.append(triangle)
         else: # colonna pari
@@ -191,9 +256,9 @@ def create_triangles(side_length):
                     #
                     # PROBLEM
                     #
-                    triangle = (i-height/2+1, j-2*half_width+1, i+height/2+1, j-half_width+2+1, i-height/2+1, j+1)
+                    triangle = (i-height//2+1, j-2*half_width+1, i+height//2+1, j-half_width+2+1, i-height//2+1, j+1)
                 else: # sinistra
-                    triangle = (i-height/2+1, j-half_width+1, i+height/2+1, j+1, i+height/2+1, j-2*half_width+1)
+                    triangle = (i-height//2+1, j-half_width+1, i+height//2+1, j+1, i+height//2+1, j-2*half_width+1)
                 
                 result.append(triangle)
 
@@ -292,6 +357,7 @@ def unify_node(graph, id):
 
     newNode = Node('[' + '_'.join(str(ids)) + ']', selected_node.color)
     newNode.adjacentNodes = set.union(set([x for y in to_be_unified for x in y.adjacentNodes if x.id not in ids]))
+    newNode.originalNodes = set(ids)
 
     graph[:] = [x for x in graph if x.id not in ids]
 
@@ -306,9 +372,6 @@ def unify_node(graph, id):
     graph.append(newNode)
 
 def unify(graph):
-    # depth first per trovare gruppo di nodi dello stesso colore ---> unifico
-    # ogni volta cerco un nodo con un adiacenza dello stesso colore e scelgo quel nodo per iniziazare la ricerca
-    # se non lo trovo ho finito
     unified = False
 
     while not unified:
@@ -319,17 +382,31 @@ def unify(graph):
         else:
             unified = True
 
-def unify_old(graph):
-    length = -1
+# def unify(graph):
+#     length = -1
 
-    while length != len(graph):
-        length = len(graph)
+#     while length != len(graph):
+#         length = len(graph)
 
-        for node in graph:
-            move(graph, node.id, node.color)
+#         for node in graph:
+#             move(graph, node.id, node.color)
             
-            if length != len(graph):
-                break
+#             if length != len(graph):
+#                 break
+
+def get_state(graph):
+    temp = ['white'] * 290
+
+    for item in graph:
+        for index in item.originalNodes:
+            temp[index] = item.color
+
+    return temp
+
+def fix_single_nodes(graph):
+    for node in graph:
+        if node.color not in [x.color for x in node.adjacentNodes]:
+            node.originalNodes.add(node.id)
 
 def move(graph, id, color):
     selected_node = next(x for x in graph if x.id == id)
@@ -367,6 +444,7 @@ def move(graph, id, color):
 
     newNode = Node('[' + '_'.join(str(ids)) + ']', color)
     newNode.adjacentNodes = set.union(set([x for y in to_be_unified for x in y.adjacentNodes if x.id not in ids]))
+    newNode.originalNodes = set.union(set([x for y in to_be_unified for x in y.originalNodes]))
 
     graph[:] = [x for x in graph if x.id not in ids]
 
@@ -381,6 +459,9 @@ def move(graph, id, color):
     graph.append(newNode)
 
 def solve(graph, step = 1):
+    if step == 1:
+        solution_steps.append(get_state(graph))
+
     if step > moves_number:
         return
         
@@ -399,6 +480,13 @@ def solve(graph, step = 1):
                 new_graph = copy.deepcopy(graph)
                 moves.append((node.id, color))
                 move(new_graph, node.id, color)
+
+
+
+                solution_steps.append(get_state(new_graph))
+
+
+
                 solve(new_graph, step + 1)
 
                 if found == True:
@@ -411,6 +499,7 @@ def solve(graph, step = 1):
                         app.text.insert(tk.END, str(id) + ": " + color + '\n')
 
                     app.text.config(state=tk.DISABLED)
+                    app.next_button.config(state=tk.NORMAL)
                     
                     # print ()
                     # count += 1
@@ -419,6 +508,7 @@ def solve(graph, step = 1):
                     return
                 else:
                     moves.pop()
+                    solution_steps.pop()
 
     app.text.config(state=tk.NORMAL)
     app.text.delete(1.0, tk.END)
