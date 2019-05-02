@@ -5,6 +5,12 @@ import copy
 import re
 import time
 import collections
+import itertools
+
+# refactor code:
+# - un po' tutto
+# - put callbacks in MainApp
+# - ids naming (a part from the firsts)
 
 colors_in_graph = []
 moves_number = 0
@@ -209,9 +215,7 @@ def on_previous_button_click():
     
 
     if str(app.next_button['state']) == 'disabled':
-        app.next_button.config(state=tk.NORMAL)
-
-    
+        app.next_button.config(state=tk.NORMAL)    
 
 def on_next_button_click():
     global current_step
@@ -228,29 +232,7 @@ def on_next_button_click():
         app.canvas.itemconfig(i + 1, fill=solution_steps[current_step][i])
 
     if str(app.previous_button['state']) == 'disabled':
-        app.previous_button.config(state=tk.NORMAL)
-
-    
-
-def test(event):
-
-    graph = create_graph()
-
-    for node in graph:
-        print (node.id)
-        temp = ''
-
-        for adj in node.adjacentNodes:
-            if hasattr(adj, 'id'):
-                temp += str(adj.id)
-                temp += ' '
-            else:
-                temp += '_ '
-
-        print (temp)
-        print ()
-
-        # print (len(node.adjacentNodes))
+        app.previous_button.config(state=tk.NORMAL) 
 
 # FIX DOUBLE LINE
 def create_triangles(side_length):
@@ -364,9 +346,7 @@ def find_same_color_node(node):
 
     return result
 
-#
 #OPRTIMIZE like move()
-#
 def unify_node(graph, id):
     selected_node = next(x for x in graph if x.id == id)
 
@@ -453,8 +433,7 @@ def move(graph, id, color):
 
     ids = [x.id for x in to_be_unified]
 
-    # newNode = Node('[' + '_'.join(str(ids)) + ']', color)
-    newNode = Node('don\'t care', color)
+    newNode = Node('[' + '_'.join(str(ids)) + ']', color)
     # newNode.adjacentNodes = set.union(set([x for y in to_be_unified for x in y.adjacentNodes if x.id not in ids]))
     # newNode.originalNodes = set.union(set([x for y in to_be_unified for x in y.originalNodes]))
 
@@ -474,8 +453,12 @@ def solve(graph, step = 1):
     if step == 1:
         solution_steps.append(get_state(graph))
 
+
+
     # if step > moves_number:
     #     return
+
+
 
     if step > moves_number or len(set([x.color for x in graph])) > moves_number - step + 2:
         return
@@ -486,36 +469,41 @@ def solve(graph, step = 1):
 
     graph.sort(key=lambda x: len(x.adjacentNodes), reverse=True)
 
-    # for node in graph:
-    #     adjacent_colors = [x.color for x in node.adjacentNodes]
-    #     counter = collections.Counter(adjacent_colors)
+
 
     # graph.sort(key=lambda x: collections.Counter([adj.color for adj in x.adjacentNodes]).most_common(1)[0][1], reverse=True)
 
-    # check for color collapsing
+
+
+    # graph_color_counter = collections.Counter([x.color for x in graph])
+
+    # for item in graph:
+    #     adjacent_color_counter = collections.Counter([x.color for x in item.adjacentNodes])
+    #     collapsible = set(graph_color_counter.items()) & set(adjacent_color_counter.items())
+
+    #     if len(collapsible) > 0:
+    #         graph.pop(graph.index(item))
+    #         graph.insert(0, item)
+    #         break
 
     for node in graph:
-        # ordered_colors = {x.color for x in node.adjacentNodes}
+        ordered_colors = {x.color for x in node.adjacentNodes if x.color != node.color}
+
 
         # ordered_colors = [x.color for x in node.adjacentNodes]
         # ordered_colors.sort(key=lambda x: collections.Counter([adj.color for adj in node.adjacentNodes])[x], reverse=True)
 
-        for color in colors_in_graph:
+        # for color in colors_in_graph:
+        for color in ordered_colors:
+
+            # MAYBE I CAN REMOVE THE IF
             if color != node.color:
                 new_graph = copy.deepcopy(graph)
-                moves.append((node.id, color))
+                # moves.append((node.id, color))
                 move(new_graph, node.id, color)
-
-
-
                 solution_steps.append(get_state(new_graph))
-
                 explored_states += 1
-
                 solve(new_graph, step + 1)
-
-
-                
 
                 if found:
                     return
@@ -528,8 +516,6 @@ def solve(graph, step = 1):
 
                     # app.text.config(state=tk.DISABLED)
                     app.next_button.config(state=tk.NORMAL)
-
-                    
                     
                     # print ()
                     # count += 1
@@ -537,13 +523,46 @@ def solve(graph, step = 1):
                     found = True
                     return
                 else:
-                    moves.pop()
+                    # moves.pop()
                     solution_steps.pop()
 
     # app.text.config(state=tk.NORMAL)
     # app.text.delete(1.0, tk.END)
     # app.text.insert(tk.END, 'no solution can be found with ' + str(moves_number) + ' move(s)')
     # app.text.config(state=tk.DISABLED)
+
+    if step == 1:
+        messagebox.showerror(title="ERROR", message='no solution can be found with ' + str(moves_number) + ' move(s)')
+
+def solve2(graph, step = 1):
+    if step == 1:
+        solution_steps.append(get_state(graph))
+
+    if step > moves_number or len(set([x.color for x in graph])) > moves_number - step + 2:
+        return
+
+    global found
+    global explored_states
+
+    pairs =  itertools.product(graph, colors_in_graph)
+
+    # check if while try catch is faster
+    for pair in list(pairs):
+        new_graph = copy.deepcopy(graph)
+        move(new_graph, pair[0].id, pair[1])
+        solution_steps.append(get_state(new_graph))
+        explored_states += 1
+        solve(new_graph, step + 1)
+
+        if found:
+            return
+
+        if len(new_graph) == 1:
+            app.next_button.config(state=tk.NORMAL)
+            found = True
+            return
+        else:
+            solution_steps.pop()
 
     if step == 1:
         messagebox.showerror(title="ERROR", message='no solution can be found with ' + str(moves_number) + ' move(s)')

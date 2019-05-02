@@ -1,0 +1,31 @@
+# CLASSIC
+
+# each turn check for remaining colors ---> DONE
+
+# STRON VERSION: for a certain node i use only adjacent colors ---> DONE
+
+# choose node considering the maximum number of adjacent nodes of a certain color (sort node, then sort color) ---> DONE (NOT TESTED)
+
+# choose node considering the maximum number of adjacent nodes of a certain color in next turn
+
+# choose node considering a color will be reducible in next turn
+
+# if i reduce a color to a single node, i do the move ---> DONE (NOT TESTED)
+
+# stella killer???
+
+----------------------------------------------------------------------------------------------------
+
+# if thare are no moves left ---> DONE
+
+# if remaining moves are too few in respect to the colors remaining ---> DONE
+
+# STRONG VERSION: one color must be single node
+
+----------------------------------------------------------------------------------------------------
+
+# A*
+
+####################################################################################################
+
+# COUPLE
