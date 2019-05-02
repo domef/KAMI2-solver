@@ -11,6 +11,7 @@ An user-friendly GUI where the user can create a level just like in the in-game 
 
 The solution is interactive and the user can go back and forth throught the steps.
 
+It is possible to save and load levels.
 
 ###### NEXT UPDATE:
 

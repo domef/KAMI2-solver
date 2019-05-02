@@ -1,27 +1,31 @@
 import tkinter as tk
 from tkinter import messagebox
+from tkinter import simpledialog
 import math
 import copy
 import re
 import time
 import collections
 import itertools
+import os
 
-# refactor code:
-# - un po' tutto
+# - code refactor
 # - put callbacks in MainApp
 # - ids naming (a part from the firsts)
+# - printing 'no solution' not in solve()
+# - switch on_click to command?
+# - implement save/load
+# - GUI fix all shit
 
 colors_in_graph = []
 moves_number = 0
-moves = []
 solution_steps = []
 current_step = 0
 found = False
 count = 0
 explored_states = 0
 
-triangle_side_length = 40
+triangle_side_length = 50
 
 COLORS = {
     1: 'blue',
@@ -88,13 +92,17 @@ class MainApplication(tk.Frame):
         self.reset_button.pack()
         self.reset_button.bind('<ButtonRelease-1>', on_reset_button_click)
 
+        self.reset_button = tk.Button(self.frame, text='Save')
+        self.reset_button.pack()
+        self.reset_button.bind('<ButtonRelease-1>', on_save_button_click)
+
+        self.reset_button = tk.Button(self.frame, text='Load')
+        self.reset_button.pack()
+        self.reset_button.bind('<ButtonRelease-1>', on_load_button_click)
+
         self.solution_button = tk.Button(self.frame, text='Calculate solution')
         self.solution_button.pack()
         self.solution_button.bind('<ButtonRelease-1>', on_solution_button_click)
-
-    # def print_explored_states(self):
-    #     print (str(explored_states))
-    #     self.parent.after(5000, self.print_explored_states)
 
 def on_canvas_click(event):
     value = app.selected_color.get()
@@ -150,8 +158,6 @@ def on_solution_button_click(event):
     # print()
 
     res = is_connected_component(graph)
-
-    print ('is connected: ' + str(res))
 
     if not res:
         messagebox.showerror(title="ERROR", message='The level must be a connected component')
@@ -234,7 +240,25 @@ def on_next_button_click():
     if str(app.previous_button['state']) == 'disabled':
         app.previous_button.config(state=tk.NORMAL) 
 
-# FIX DOUBLE LINE
+def on_save_button_click(event):
+    current_state  = [(item, app.canvas.itemcget(item, 'fill')) for item in app.canvas.find_all()]
+
+    file_name = tk.simpledialog.askstring('Save', 'Insert the file name')
+
+    with open(os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__))) + os.sep + 'tests' + os.sep + file_name + '.txt', 'w') as f:
+        f.writelines('%s %s\n' % x for x in current_state)
+
+def on_load_button_click(event):
+    file_name = tk.simpledialog.askstring('Load', 'Insert the file name')
+
+    with open(os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__))) + os.sep + 'tests' + os.sep + file_name + '.txt', 'r') as f:
+        lines = f.readlines()
+
+    lines = [(x.strip().split()[0], x.strip().split()[1]) for x in lines]
+
+    for item, color in lines:
+        app.canvas.itemconfig(item, fill=color)
+
 def create_triangles(side_length):
     result = []
     half_width = int(side_length // 2)
@@ -448,20 +472,25 @@ def move(graph, id, color):
     
     graph.append(newNode)
 
+def is_color_single_node(graph):
+    colors_counter = collections.Counter([x.color for x in graph])
+
+    return any(x == 1 for x in colors_counter.values())
+
 # @profile
 def solve(graph, step = 1):
     if step == 1:
         solution_steps.append(get_state(graph))
 
-
-
-    # if step > moves_number:
-    #     return
-
-
-
     if step > moves_number or len(set([x.color for x in graph])) > moves_number - step + 2:
+        if step == 1:
+            messagebox.showerror(title="ERROR", message='no solution can be found with ' + str(moves_number) + ' move(s)')
         return
+
+    # if step > moves_number or len(set([x.color for x in graph])) > moves_number - step + 2 or (len(set([x.color for x in graph])) == moves_number - step + 2 and not is_color_single_node(graph)):
+    #     if step == 1:
+    #         messagebox.showerror(title="ERROR", message='no solution can be found with ' + str(moves_number) + ' move(s)')
+    #     return
 
     global found
     # global count
@@ -499,7 +528,6 @@ def solve(graph, step = 1):
             # MAYBE I CAN REMOVE THE IF
             if color != node.color:
                 new_graph = copy.deepcopy(graph)
-                # moves.append((node.id, color))
                 move(new_graph, node.id, color)
                 solution_steps.append(get_state(new_graph))
                 explored_states += 1
@@ -509,27 +537,12 @@ def solve(graph, step = 1):
                     return
 
                 if len(new_graph) == 1:
-                    # app.text.config(state=tk.NORMAL)
-                    # app.text.delete(1.0, tk.END)
-                    # for id, color in moves:
-                    #     app.text.insert(tk.END, str(id) + ": " + color + '\n')
-
-                    # app.text.config(state=tk.DISABLED)
                     app.next_button.config(state=tk.NORMAL)
                     
-                    # print ()
-                    # count += 1
-                    # moves.pop()
                     found = True
                     return
                 else:
-                    # moves.pop()
                     solution_steps.pop()
-
-    # app.text.config(state=tk.NORMAL)
-    # app.text.delete(1.0, tk.END)
-    # app.text.insert(tk.END, 'no solution can be found with ' + str(moves_number) + ' move(s)')
-    # app.text.config(state=tk.DISABLED)
 
     if step == 1:
         messagebox.showerror(title="ERROR", message='no solution can be found with ' + str(moves_number) + ' move(s)')
@@ -539,15 +552,34 @@ def solve2(graph, step = 1):
         solution_steps.append(get_state(graph))
 
     if step > moves_number or len(set([x.color for x in graph])) > moves_number - step + 2:
+        if step == 1:
+            messagebox.showerror(title="ERROR", message='no solution can be found with ' + str(moves_number) + ' move(s)')
         return
+
+    # if step > moves_number or len(set([x.color for x in graph])) > moves_number - step + 2 or (len(set([x.color for x in graph])) == moves_number - step + 2 and not is_color_single_node(graph)):
+    #     if step == 1:
+    #         messagebox.showerror(title="ERROR", message='no solution can be found with ' + str(moves_number) + ' move(s)')
+    #     return
 
     global found
     global explored_states
 
-    pairs =  itertools.product(graph, colors_in_graph)
+    pairs = list(itertools.product(graph, {x.color for x in graph}))
 
-    # check if while try catch is faster
-    for pair in list(pairs):
+    pairs.sort(key=lambda x: len([y.color for y in x[0].adjacentNodes if y.color == x[1]]), reverse=True)
+
+    # graph_color_counter = collections.Counter([x.color for x in graph])
+
+    # for node, color in pairs:
+    #     count = len([x.color for x in node.adjacentNodes if x.color == color])
+    #     collapsible = graph_color_counter.items() & set((color, count))
+
+    #     if len(collapsible) > 0:
+    #         pairs.pop(pairs.index((node, color)))
+    #         pairs.insert(0, (node, color))
+    #         break # i can look for all collapsing
+
+    for pair in pairs:
         new_graph = copy.deepcopy(graph)
         move(new_graph, pair[0].id, pair[1])
         solution_steps.append(get_state(new_graph))
